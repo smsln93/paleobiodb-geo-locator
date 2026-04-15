@@ -74,7 +74,7 @@ class Config:
             if len(env_file_variables) == 0:
                 raise DotEnvNotFoundException(".env file is empty")
 
-            self.env_variables = self.env_variables = dict(env_file_variables or {})
+            self.env_variables = dict(env_file_variables or {})
 
         except DotEnvNotFoundException as dotenv_exc:
             logger.error(f"Failed to load environment variables from .env file: {dotenv_exc}")
