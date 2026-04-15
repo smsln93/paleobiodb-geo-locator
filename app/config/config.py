@@ -30,13 +30,14 @@ class Config:
         self.app_config_path = app_config_path
         self.env_config_path = env_config_path
 
-        self._load_toml()
+        self._load_app_config()
+        self._assign_app_parameters()
+
         if self.env_config_path is not None:
-            self._load_env()
+            self._load_env_config()
+            self._assign_env_parameters()
 
-        self._assign_parameters()
-
-    def _load_toml(self) -> None:
+    def _load_app_config(self) -> None:
         """
         Loads configuration variables from the provided TOML file path.
 
@@ -58,7 +59,7 @@ class Config:
         else:
             logger.debug(f"Configuration from {self.app_config_path} file has been properly loaded")
 
-    def _load_env(self) -> None:
+    def _load_env_config(self) -> None:
         """
         Loads environment variables from .env file.
 
@@ -66,15 +67,12 @@ class Config:
         """
         logger.debug("Loading configuration from .env file...")
         try:
+            if self.env_config_path and not self.env_config_path.exists():
+                    raise DotEnvNotFoundException("file not found")
 
-            env_file_variables = dotenv_values(self.env_config_path)
-            if env_file_variables is None:
-                raise DotEnvNotFoundException(".env file not found")
-
-            if len(env_file_variables) == 0:
+            self.env_variables = dotenv_values(self.env_config_path)
+            if not self.env_variables:
                 raise DotEnvNotFoundException(".env file is empty")
-
-            self.env_variables = dict(env_file_variables or {})
 
         except DotEnvNotFoundException as dotenv_exc:
             logger.error(f"Failed to load environment variables from .env file: {dotenv_exc}")
@@ -82,9 +80,9 @@ class Config:
         else:
             logger.debug("Configuration from .env file has been properly loaded")
 
-    def _assign_parameters(self) -> None:
+    def _assign_app_parameters(self) -> None:
         """
-        Assigns configuration parameters.
+        Assigns application configuration parameters.
         """
         try:
             self.base_url = self.cfg_params["paleobiodb"]["base_url"]
@@ -96,25 +94,47 @@ class Config:
             self.max_longitude = self.cfg_params["geospatial"]["max_longitude"]
             self.max_latitude = self.cfg_params["geospatial"]["max_latitude"]
 
+        except KeyError as key_err:
+            logger.error(f"Missing configuration key: {key_err}")
+            raise
+        else:
+            logger.debug("Application configuration parameters assigned successfully")
+
+    def _assign_env_parameters(self) -> None:
+        """
+        Assigns environment configuration parameters.
+        """
+        try:
             self.email_host = self.env_variables["EMAIL_HOST"]
             self.email_login = self.env_variables["EMAIL_LOGIN"]
             self.email_from = self.env_variables["EMAIL_FROM"]
             self.email_password = self.env_variables["EMAIL_PASSWORD"]
 
+            if not all([
+                self.email_host,
+                self.email_login,
+                self.email_from,
+                self.email_password
+            ]):
+                raise ValueError("Email configuration contains empty required fields")
+
             port = self.env_variables["EMAIL_PORT"]
-            if port is None or port == "":
+            if not port or port.strip() == "":
                 raise ValueError("Email port cannot be empty")
 
-            self.email_port = int(port)
+            try:
+                self.email_port = int(port)
+            except ValueError:
+                raise ValueError("Email port must be an integer")
 
             email_to = self.env_variables["EMAIL_TO"]
-
-            if email_to is None or email_to.strip() == "":
+            if not email_to or not email_to.strip():
                 self.email_to = []
             else:
                 self.email_to = [email.strip() for email in email_to.split(",") if email.strip()]
 
         except KeyError as key_err:
-            logger.error(f"Missing key in config.toml: {key_err}")
+            logger.error(f"Missing configuration key: {key_err}")
+            raise
         else:
-            logger.debug("Configuration parameters assigned successfully")
+            logger.debug("Application configuration parameters assigned successfully")

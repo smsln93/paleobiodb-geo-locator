@@ -2,7 +2,7 @@
 
 Python tool for processing paleobiological occurrence data from CSV files or the Paleobiology Database API. It exports structured data to CSV and optionally formats data into an HTML message and sends it via email.
 
-\---
+---
 
 ## Features
 
@@ -12,7 +12,7 @@ Python tool for processing paleobiological occurrence data from CSV files or the
 * Optionally send data via SMTP email
 * Provide a simple manual smoke test for end-to-end validation
 
-\---
+---
 
 ## Installation
 
@@ -26,12 +26,11 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-\---
+---
 
 ## Configuration
 
 To configure the application, copy the example configuration files and adjust them to your environment.
-
 
 
 *Application configuration*
@@ -60,9 +59,13 @@ Then fill in the values only if you plan to use email sending functionality.
 
 For Gmail accounts, you must use an App Password instead of your normal account password.
 
-\---
+---
 
 ## Run example
+
+Before running the script, ensure the `.env` file is configured correctly.
+
+Then execute:
 
 ```bash
 python scripts/email_check.py
@@ -74,15 +77,15 @@ This will:
 * generate data in HTML format
 * send email via SMTP
 
-\---
+---
 
 ## Example output
 
-!\[Mail example](images/mail\_example.jpg)
+![Mail example](images/mail_example.jpg)
 
 The dataset may contain incomplete values, which reflects the nature of real-world data in the source database. The example CSV file is also used for testing and validation purposes.
 
-\---
+---
 
 ## Notes
 
@@ -93,13 +96,13 @@ The dataset may contain incomplete values, which reflects the nature of real-wor
 * Core pipeline is currently verified via manual smoke test script
 * Requires additional testing and validation
 
-\---
+---
 
 ## Future Roadmap
 
-* \[ ] Replace static bounding box with auto-generated area based on a single coordinate
-* \[ ] Add map visualization of the queried area with fetched occurrences
-* \[ ] Implement caching for API responses
-* \[ ] Extend dataset with additional analytical fields
-* \[ ] Improve HTML formatting for email data presentation or replace it with sending a CSV file as an attachment.
+* [ ] Replace static bounding box with auto-generated area based on a single coordinate
+* [ ] Add map visualization of the queried area with fetched occurrences
+* [ ] Implement caching for API responses
+* [ ] Extend dataset with additional analytical fields
+* [ ] Improve HTML formatting for email data presentation or replace it with sending a CSV file as an attachment.
 
