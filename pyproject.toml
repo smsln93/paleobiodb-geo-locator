@@ -1,0 +1,18 @@
+[project]
+name = "paleobiodb-geo-locator"
+version = "0.1.0"
+dependencies = [
+  "requests>=2.31.0",
+  "python-dotenv>=1.2.2"
+]
+requires-python = ">=3.14"
+authors = [
+  {name = "Sylwester Masłoń", email = "sylwester.maslon@gmail.com"}
+]
+description = "Python tool for processing paleobiological occurrence data from CSV files or the Paleobiology Database API. It can export data to CSV and send HTML output via email."
+readme = "README.md"
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.4.1"
+]

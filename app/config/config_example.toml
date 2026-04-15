@@ -1,0 +1,13 @@
+[paleobiodb]
+base_url = "https://paleobiodb.org/data1.2/occs/list.json"
+interval = "Maastrichtian"
+
+[application]
+send_email = false
+query_parameters = "ident,phylo,class,coords"
+
+[geospatial]
+min_longitude = -106.0
+max_longitude = -100.0
+min_latitude = 44.5
+max_latitude = 49.0

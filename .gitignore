@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# venv
+venv/
+.env/
+.venv/
+
+# config/secrets
+config.toml
+.env
+
+# output
+output/
+logs/
+
+# IDE
+.idea/
+
+# system files
+.DS_Store
+Thumbs.db
+
+# pytest
+.pytest_cache

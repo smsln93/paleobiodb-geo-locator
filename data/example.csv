@@ -1,0 +1,5 @@
+occurrence_id,taxon_id,taxon_name,rank,phylogenetic_group,class_name,latitude,longitude,early_interval,late_interval,early_age,late_age,collection_id
+occ:1007483,txn:212698,Cedrobaena brinkman,3,Chordata,Reptilia,48.008888,-106.448608,Late Maastrichtian,,72.2,66,col:122906
+occ:820684,txn:134839,Borealosuchus sternbergii,3,Chordata,Reptilia,46.026402,-103.766899,Late Maastrichtian,Late Maastrichtian,72.2,66,col:45117
+occ:820774,txn:40007,Didelphodon,5,Chordata,Mammalia,46.381901,-103.964401,Late Maastrichtian,,72.2,66,col:45130
+occ:1123612,txn:38761,Edmontosaurus,5,Chordata,Ornithischia,47.656944,-107.336670,Late Maastrichtian,Late Maastrichtian,72.2,66,col:72143
