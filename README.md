@@ -63,12 +63,14 @@ For Gmail accounts, you must use an App Password instead of your normal account 
 
 ## Run example
 
-Before running the script, ensure the `.env` file is configured correctly.
+Before running the script, ensure the `.env` file is configured correctly
+as well as dependencies are installed.
 
 Then execute:
 
 ```bash
-python scripts/email_check.py
+cd paleobiodb-geo-locator
+python -m scripts.email_check
 ```
 
 This will:

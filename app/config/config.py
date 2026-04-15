@@ -137,4 +137,4 @@ class Config:
             logger.error(f"Missing configuration key: {key_err}")
             raise
         else:
-            logger.debug("Application configuration parameters assigned successfully")
+            logger.debug("Environment configuration parameters assigned successfully")
