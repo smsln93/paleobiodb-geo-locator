@@ -21,7 +21,7 @@ git clone https://github.com/smsln93/paleobiodb-geo-locator.git
 cd paleobiodb-geo-locator
 
 python -m venv venv
-source venv/bin/activate  # Windows: venv\\\\\\\\Scripts\\\\\\\\activate
+source venv/bin/activate  # Windows: venv\Scripts\activate
 
 pip install -r requirements.txt
 ```
@@ -39,7 +39,7 @@ To configure the application, copy the example configuration files and adjust th
 Copy the default configuration file:
 
 ```bash
-cp app/config/config\\\\\\\_example.toml app/config/config.toml
+cp app/config/config_example.toml app/config/config.toml
 ```
 
 Then update it according to the provided schema inside the file.
@@ -54,7 +54,6 @@ Copy the example .env file:
 
 ```bash
 cp .env.example .env
-
 ```
 
 Then fill in the values only if you plan to use email sending functionality.
@@ -66,7 +65,7 @@ For Gmail accounts, you must use an App Password instead of your normal account 
 ## Run example
 
 ```bash
-python scripts/email\\\\\\\_check.py
+python scripts/email_check.py
 ```
 
 This will:
