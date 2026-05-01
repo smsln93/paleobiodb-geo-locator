@@ -1,16 +1,18 @@
 import argparse
+import sys
 from pathlib import Path
 from typing import Tuple
 
 from app.utils.logging_utils import setup_logger
-from app.config.config import Config
-from app.utils.requests_utils import fetch_paleobiodb_content
-from app.services.paleobiodb_dataset import PaleobiodbDataset
-from app.services.paleobiodb_email_sender import PaleobiodbEmailSender
+from app.config.config import Config, ConfigError
+from app.utils.files_utils import get_default_output_path, ensure_output_dir
+from app.services.paleobiodb_dataset import PaleobiodbDataset, DatasetWriteError, DatasetReadError
+from app.services.paleobiodb_email_sender import PaleobiodbEmailSender, EmailSendError
+from app.utils.requests_utils import DataFetchError
 
 
 DESCRIPTION = """
-Fetch PaleobioDB records and optionally send an HTML report by email.
+Fetch records from Paleobiology Database and send an email report with a CSV file of occurrences.
 
 Data can be fetched directly from the PaleobioDB API or loaded from a CSV file.
 
@@ -40,7 +42,7 @@ Options:
       Filter by taxonomic class (e.g., 'Anthozoa').
 
   --send-email
-      Send the HTML report via email.
+      Send the email report.
 
 Examples:
   python main.py --interval Maastrichtian \
@@ -55,8 +57,7 @@ Examples:
 """
 
 
-def send_report_email(dataset, config):
-    html_table = dataset.create_table_html()
+def send_report_email(config: Config, dataset: PaleobiodbDataset,  file: Path) -> None:
 
     email_sender = PaleobiodbEmailSender(
         host=config.email_host,
@@ -67,10 +68,10 @@ def send_report_email(dataset, config):
         mail_to=config.email_to
     )
 
-    email_sender.send_html_report(
+    email_sender.send_email_report(
         subject=f"PaleobioDB Report for {config.interval}",
-        title="PaleobioDB Data Report",
-        html_table=html_table
+        dataset=dataset,
+        data_file=file
     )
 
 
@@ -98,6 +99,13 @@ def validate_boundary_box(min_latitude: float, min_longitude: float, max_latitud
     return min_latitude, min_longitude, max_latitude, max_longitude
 
 
+def csv_path(value: str) -> Path:
+    path = Path(value)
+    if path.suffix.lower() != ".csv":
+        raise argparse.ArgumentTypeError("File must have .csv extension")
+    return path
+
+
 def main():
     parser = argparse.ArgumentParser(prog="Paleobiodb-geo-reporter",
                                      description=DESCRIPTION,
@@ -120,7 +128,7 @@ def main():
 
     parser.add_argument("--output-csv",
                         help="Path to the CSV file to save the results.",
-                        type=str,
+                        type=csv_path,
                         required=False)
 
     parser.add_argument("--limit",
@@ -144,7 +152,7 @@ def main():
                         default=None)
 
     parser.add_argument("--send-email",
-                        help="Send HTML report by email",
+                        help="Send email report",
                         action="store_true",
                         required=False)
 
@@ -164,7 +172,11 @@ def main():
 
     logger.info("Starting PaleobioDB CLI")
 
-    config = Config()
+    try:
+        config = Config()
+    except ConfigError as cfg_err:
+        logger.error(f"Config failed: {cfg_err}")
+        sys.exit(1)
 
     if arguments.boundary_box is not None:
         min_latitude, min_longitude, max_latitude, max_longitude = arguments.boundary_box
@@ -178,20 +190,22 @@ def main():
     logger.debug(f"Resolved bounding box: {min_latitude, min_longitude, max_latitude, max_longitude}")
 
     logger.info("Building dataset...")
-    if arguments.input_csv is not None:
-        dataset = PaleobiodbDataset.from_csv(Path(arguments.input_csv))
-    else:
-        logger.info("Fetching configs from API...")
-        records = fetch_paleobiodb_content(
-            base_url=config.base_url,
-            geological_period=config.interval,
-            min_latitude=min_latitude,
-            max_latitude=max_latitude,
-            min_longitude=min_longitude,
-            max_longitude=max_longitude,
-            show=config.show
-        )
-        dataset = PaleobiodbDataset(records)
+    try:
+        if arguments.input_csv:
+            dataset = PaleobiodbDataset.from_csv(arguments.input_csv)
+        else:
+            dataset = PaleobiodbDataset.from_api(
+                base_url=config.base_url,
+                geological_period=config.interval,
+                min_latitude=min_latitude,
+                max_latitude=max_latitude,
+                min_longitude=min_longitude,
+                max_longitude=max_longitude,
+                query_parameters=config.query_parameters
+            )
+    except (DatasetReadError, DataFetchError) as dataset_build_err:
+        logger.error(f"Dataset build failed: {dataset_build_err}")
+        sys.exit(1)
 
     if arguments.filter_species is not None:
         records = dataset.filter_species()
@@ -209,16 +223,22 @@ def main():
         dataset = PaleobiodbDataset(dataset.limit(arguments.limit))
 
     logger.info("Saving results to CSV file...")
-    if arguments.output_csv:
-        dataset.to_csv(arguments.output_csv)
-    else:
-        dataset.to_csv()
+    output_file = arguments.output_csv or get_default_output_path()
+    ensure_output_dir(output_file.parent)
+
+    try:
+        dataset.to_csv(output_file)
+    except DatasetWriteError as write_err:
+        logger.error(f"Dataset write failed: {write_err}")
+        sys.exit(1)
 
     send_email_flag = arguments.send_email or config.send_email
 
-
     if send_email_flag:
-        send_report_email(dataset, config)
+        try:
+            send_report_email(config, dataset, output_file)
+        except EmailSendError as email_send_err:
+            logger.warning(f"Email sending failed: {email_send_err}")
 
 
 if __name__ == "__main__":

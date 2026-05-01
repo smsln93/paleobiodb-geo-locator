@@ -7,6 +7,13 @@ from app.models.paleobiodb_record import PaleobiodbRecord
 logger = logging.getLogger(__name__)
 
 
+class DataFetchError(Exception):
+    """
+    Raised when the PaleobioDB API request fails or returns an invalid response.
+    """
+    pass
+
+
 def fetch_paleobiodb_content(base_url: str,
                              geological_period: str,
                              min_latitude: float,
@@ -25,6 +32,7 @@ def fetch_paleobiodb_content(base_url: str,
     :param max_longitude: Maximum longitude.
     :param query_parameters: Comma-separated query parameters to include.
     :return: List of PaleoRecord instances.
+    :raises DataFetchError: If the PaleobioDB API request fails or returns an invalid response.
     """
     logger.debug("Fetching records from the Paleobiology Database")
 
@@ -34,7 +42,7 @@ def fetch_paleobiodb_content(base_url: str,
         "latmax": max_latitude,
         "lngmin": min_longitude,
         "lngmax": max_longitude,
-        "show": query_parameters
+        "query_parameters": query_parameters
     }
 
     try:
@@ -43,5 +51,4 @@ def fetch_paleobiodb_content(base_url: str,
         data = paleobiodb_response.json()
         return [PaleobiodbRecord.from_api_dict(record) for record in data.get("records", [])]
     except requests.RequestException as req_exc:
-        logger.error(f"Failed to fetch paleobiodb data: {req_exc}")
-        raise
+        raise DataFetchError(f"Failed to fetch paleobiodb data.") from req_exc

@@ -14,7 +14,6 @@ def run_email_report():
     cfg = Config(env_config_path=ENV_FILE)
 
     records = PaleobiodbDataset.from_csv(CSV_FILE_EXAMPLE)
-    table = records.create_table_html()
 
     sender = PaleobiodbEmailSender(
         cfg.email_host,
@@ -25,9 +24,10 @@ def run_email_report():
         cfg.email_to
     )
 
-    sender.send_html_report(subject=MAIL_SUBJECT,
-                            title=MAIL_TITLE,
-                            html_table=table)
+    sender.send_email_report(subject=MAIL_SUBJECT,
+                             dataset=records,
+                             data_file=CSV_FILE_EXAMPLE)
+
 
 if __name__ == "__main__":
     run_email_report()

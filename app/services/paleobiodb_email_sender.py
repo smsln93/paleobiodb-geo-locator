@@ -1,13 +1,21 @@
 import smtplib
 import ssl
-import traceback
 import logging
+from pathlib import Path
 from typing import List
 
 from email.message import EmailMessage
 
+from app.services.paleobiodb_dataset import PaleobiodbDataset
 
 logger = logging.getLogger(__name__)
+
+
+class EmailSendError(Exception):
+    """
+    Raised when there is an issue during sending email preparation or sending.
+    """
+    pass
 
 
 class PaleobiodbEmailSender:
@@ -37,6 +45,11 @@ class PaleobiodbEmailSender:
             self._validate_parameters()
 
     def _validate_parameters(self) -> None:
+        """
+        Validates parameters for sending email preparation or sending.
+
+        :raises EmailSendError: If there are missing required parameters.
+        """
         missing_params: List = []
 
         if not self.host:
@@ -55,48 +68,46 @@ class PaleobiodbEmailSender:
             missing_params.append("port")
 
         if missing_params:
-            raise ValueError(f"Missing required parameters: {missing_params}")
+            raise EmailSendError(f"Missing required parameters: {missing_params}")
 
-    def send_html_report(self, subject: str, title: str, html_table: str) -> None:
+    def send_email_report(self, subject: str, dataset: PaleobiodbDataset, data_file: Path) -> None:
         """
-        Sends an HTML email report to the specified recipients.
+        Sends an email report to the specified recipients.
 
         :param subject: Subject line of the email.
-        :param title: Title of the report.
-        :param html_table: HTML table containing PaleobioDB records configs to be included in the email body.
-        :raises smtplib.SMTPException: If there is an issue related to SMTP during sending.
-        :raises Exception: If there is any other issue during email preparation or sending.
-        """
-
-        logger.debug("Sending message...")
-
-        html_content = f"""
-        <html>
-          <body>
-            <p>{title}</p>
-            {html_table}
-          </body>
-        </html>
+        :param dataset: PaleoBioDB dataset.
+        :param data_file: CSV file containing PaleobioDB records to be included in the email body as attachment.
+        :raises EmailSendError: If the email cannot be sent due to SMTP errors or connection issues.
         """
 
         if not self.enable:
-            logger.info("Skipping sending HTML report.")
+            return
+
+        if not dataset.records:
+            logger.warning("PaleoBioDB dataset is empty - skipping sending email report.")
             return
 
         email = EmailMessage()
         email['From'] = self.mail_from
         email['To'] = ", ".join(self.mail_to)
         email['Subject'] = subject
-        email.add_alternative(html_content, subtype="html")
+
+        email.set_content("Found occurrences can be found in attachment.")
+        with data_file.open(mode="rb") as file:
+
+            email.add_attachment(file.read(),
+                       maintype="text",
+                       subtype="csv",
+                       filename=data_file.name)
 
         context = ssl.create_default_context()
+
+        logger.debug("Sending message...")
         try:
             with smtplib.SMTP_SSL(self.host, self.port, context=context) as smtp:
                 smtp.login(self.login, self.password)
-                smtp.sendmail(self.mail_from, self.mail_to, email.as_string())
+                smtp.send_message(email)
         except smtplib.SMTPException as smtp_exc:
-            logger.error(f"SMTP-related error during sending: {smtp_exc}")
-        except Exception as exc:
-            logger.error(f"Failed to send email: {exc}\n{traceback.format_exc()}")
-        else:
-            logger.debug("Message has been sent.")
+            raise EmailSendError(f"Error during sending email message") from smtp_exc
+
+        logger.debug("Message has been sent.")

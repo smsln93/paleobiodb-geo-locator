@@ -10,9 +10,9 @@ from .config_paths import APP_CONFIG_FILE
 logger = logging.getLogger(__name__)
 
 
-class DotEnvNotFoundException(Exception):
+class ConfigError(Exception):
     """
-    Raised when .env file cannot be loaded.
+    Raised when configuration is missing or invalid.
     """
     pass
 
@@ -41,21 +41,18 @@ class Config:
         """
         Loads configuration variables from the provided TOML file path.
 
-        :raises FileNotFoundError: If TOML file does not exist in config directory.
-        :raises tomllib.TOMLDecodeError: If TOML file cannot be properly decoded.
+        :raises ConfigError: If configuration cannot be loaded or is invalid.
         """
         logger.debug(f"Loading configuration from {self.app_config_path} file...")
         try:
             with self.app_config_path.open('rb') as app_config:
                 self.cfg_params = tomllib.load(app_config)
 
-        except FileNotFoundError:
-            logger.error(f"{self.app_config_path} file not found. "
-                           f"Make sure the file exists in the \\config directory.")
-            raise
-        except tomllib.TOMLDecodeError as decode_exc:
-            logger.error(f"Failed to decode {self.app_config_path} file: {decode_exc}")
-            raise
+        except FileNotFoundError as file_not_found_err:
+            raise ConfigError(f"Missing configuration file: {self.app_config_path}"
+                              f"Ensure it exists in the \\config directory.") from file_not_found_err
+        except tomllib.TOMLDecodeError as toml_error:
+            raise ConfigError(f"Invalid TOML configuration: {self.app_config_path}.") from toml_error
         else:
             logger.debug(f"Configuration from {self.app_config_path} file has been properly loaded")
 
@@ -63,22 +60,18 @@ class Config:
         """
         Loads environment variables from .env file.
 
-        :raises DotEnvNotFoundException: If .env file cannot be found or required keys are missing.
+        :raises ConfigError: If configuration cannot be loaded or is invalid.
         """
         logger.debug("Loading configuration from .env file...")
-        try:
-            if self.env_config_path and not self.env_config_path.exists():
-                    raise DotEnvNotFoundException("file not found")
 
-            self.env_variables = dotenv_values(self.env_config_path)
-            if not self.env_variables:
-                raise DotEnvNotFoundException(".env file is empty")
+        if self.env_config_path and not self.env_config_path.exists():
+            raise ConfigError(".env file not found")
 
-        except DotEnvNotFoundException as dotenv_exc:
-            logger.error(f"Failed to load environment variables from .env file: {dotenv_exc}")
-            raise
-        else:
-            logger.debug("Configuration from .env file has been properly loaded")
+        self.env_variables = dotenv_values(self.env_config_path)
+        if not self.env_variables:
+            raise ConfigError(".env file is empty")
+
+        logger.debug("Configuration from .env file has been properly loaded")
 
     def _assign_app_parameters(self) -> None:
         """
@@ -95,8 +88,7 @@ class Config:
             self.max_latitude = self.cfg_params["geospatial"]["max_latitude"]
 
         except KeyError as key_err:
-            logger.error(f"Missing configuration key: {key_err}")
-            raise
+            raise ConfigError("Missing configuration key") from key_err
         else:
             logger.debug("Application configuration parameters assigned successfully")
 
@@ -116,16 +108,16 @@ class Config:
                 self.email_from,
                 self.email_password
             ]):
-                raise ValueError("Email configuration contains empty required fields")
+                raise ConfigError("Email configuration contains empty required fields")
 
             port = self.env_variables["EMAIL_PORT"]
             if not port or port.strip() == "":
-                raise ValueError("Email port cannot be empty")
+                raise ConfigError("Email port cannot be empty")
 
             try:
                 self.email_port = int(port)
-            except ValueError:
-                raise ValueError("Email port must be an integer")
+            except ValueError as value_error:
+                raise ConfigError(f"Invalid email_port value: {port}") from value_error
 
             email_to = self.env_variables["EMAIL_TO"]
             if not email_to or not email_to.strip():
@@ -134,7 +126,6 @@ class Config:
                 self.email_to = [email.strip() for email in email_to.split(",") if email.strip()]
 
         except KeyError as key_err:
-            logger.error(f"Missing configuration key: {key_err}")
-            raise
+            raise ConfigError(f"Missing configuration key") from key_err
         else:
             logger.debug("Environment configuration parameters assigned successfully")
