@@ -2,7 +2,7 @@ import pytest
 import requests
 from unittest.mock import patch, Mock
 
-from app.utils.requests_utils import fetch_paleobiodb_content
+from app.utils.requests_utils import fetch_paleobiodb_content, DataFetchError
 
 
 @patch("app.utils.requests_utils.requests.get")
@@ -38,7 +38,7 @@ def test_fetch_paleobiodb_content_builds_correct_params(mock_get):
     assert params["lngmin"] == 30.0
     assert params["lngmax"] == 40.0
     assert params["interval"] == "Furongian"
-    assert params["show"] == "coords"
+    assert params["query_parameters"] == "coords"
 
 
 @patch("app.utils.requests_utils.requests.get")
@@ -133,7 +133,7 @@ def test_fetch_api_exception(mock_get):
 
     mock_get.return_value = mock_response
 
-    with pytest.raises(requests.HTTPError):
+    with pytest.raises(DataFetchError) as exc_info:
         fetch_paleobiodb_content(
             base_url="https://paleobiodb.org/api/v1/occs/list",
             geological_period="Maastrichtian",
@@ -143,3 +143,5 @@ def test_fetch_api_exception(mock_get):
             max_longitude=-100.0,
             query_parameters="ident,phylo,class,coords"
         )
+
+    assert isinstance(exc_info.value.__cause__, requests.exceptions.HTTPError)

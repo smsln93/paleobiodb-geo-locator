@@ -5,7 +5,7 @@ from app.services.paleobiodb_dataset import PaleobiodbDataset
 def test_to_csv_writes_correct_data(tmp_path, sample_record):
     output_file = tmp_path.joinpath("output.csv")
 
-    dataset = PaleobiodbDataset(paleodb_records=[sample_record])
+    dataset = PaleobiodbDataset(paleobiodb_records=[sample_record])
 
     dataset.to_csv(output_file)
 
